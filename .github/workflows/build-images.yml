@@ -1,14 +1,7 @@
 # =====================================================================
 # 放到你 fork 的 mihomo-updater 仓库: .github/workflows/build-images.yml
-# 作用: GitHub Actions 云端构建 backend/frontend 镜像并打包成 tar
-# 用法:
-#   1. fork https://github.com/zztdandan/mihomo-updater
-#   2. 把本文件放进 fork 仓库的 .github/workflows/ 目录 (网页上 Add file 也行)
-#   3. 仓库页 Actions -> Build updater images -> Run workflow
-#      platform 选 linux/arm64 (群晖/威联通多为 arm64) 或 linux/amd64
-#   4. 跑完后在本次 run 的 Artifacts 里下载两个 tar.gz
-#   5. NAS 上: docker load -i mihomo-updater-backend-arm64.tar.gz
-#             docker load -i mihomo-updater-frontend-arm64.tar.gz
+# 用法: Actions -> Build updater images -> Run workflow -> 选平台
+# 产物: Artifacts 里下载 tar.gz -> NAS: docker load -i xxx.tar.gz
 # =====================================================================
 name: Build updater images
 
@@ -34,6 +27,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Sanitize platform tag (for artifact name)
+        id: plat
+        run: echo "tag=$(echo "${{ inputs.platform }}" | tr '/' '-')" >> "$GITHUB_OUTPUT"
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -50,10 +47,10 @@ jobs:
             .
 
       - name: Compress
-        run: gzip mihomo-updater-${{ matrix.image }}.tar
+        run: gzip -f mihomo-updater-${{ matrix.image }}.tar
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mihomo-updater-${{ matrix.image }}-${{ inputs.platform }}
+          name: mihomo-updater-${{ matrix.image }}-${{ steps.plat.outputs.tag }}
           path: mihomo-updater-${{ matrix.image }}.tar.gz
